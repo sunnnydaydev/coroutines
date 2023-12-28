@@ -405,10 +405,12 @@ class MainActivity : AppCompatActivity() {
         return "i am json"
     }
 }
+
+//I  my test lifecycleScope.launch1 - main
+//I  my test getDataFromBackend - DefaultDispatcher-worker-2
+//I  my test lifecycleScope.launch2 - main
 ```
-I  my test lifecycleScope.launch1 - main
-I  my test getDataFromBackend - DefaultDispatcher-worker-2
-I  my test lifecycleScope.launch2 - main
+
 
 如图以同步的方式写异步操作十分nice~  getDataFromBackend是一个挂起函数，这跑在work线程中withContext块以外的代码都是跑在主线程的。
 
