@@ -62,10 +62,12 @@ kotlinx-coroutines-android 是建立在 kotlinx-coroutines-core-jvm 之上的一
 
 Kotlin中常见的几种创建方式
 
-- GlobalScope.launch{}
-- runBlocking{launch{}}
-- CoroutineScope(job).launch{}
-- MainScope().launch {  }
+- GlobalScope
+- runBlocking
+- MainScope
+- CoroutineScope
+- viewModelScope（需要单独引入对应ktx扩展）
+- lifecycleScope（需要单独引入对应ktx扩展）
 
 需要注意点
 
@@ -75,158 +77,140 @@ Kotlin中常见的几种创建方式
 
 ###### 1、GlobalScope.launch{}
 
-GlobalScope.launch{}会创建一个协程作用域，并开启一个协程。
+GlobalScope 是一个顶层的 CoroutineScope，它用于启动顶级协程，这些协程的生命周期与整个应用程序的生命周期相同。
+
+GlobalScope 的协程不受限于特定的作用域，因此它们可以在整个应用程序中运行。在使用 GlobalScope 时，需要注意，它创建的协程在整个应用程序的生命周期内都会存在，因此需要小心避免内存泄漏。
+
 
 ```kotlin
-fun main() {
-
-    GlobalScope.launch {
-        println("hello kt Coroutine ！")
-    }
-
-    println("abs.main thread！")
-    //Thread.sleep(500)
-}
-```
-
-如上代码，通过GlobalScope.launch{}创建了协程域并开启一个协程。注意GlobalScope内的协程为后台协程。可以理解为java的守护线程。如何理解呢？就是通过GlobalScope.launch{}创建携程时会运行在子线程中的，这个子线程可能是已经被创建的，也可能是新创建的。但是这个子线程有个特点就是类似Java的守护线程。所以在接在主线程直接通过GlobalScope.launch{}创建的协程都是运行在类似java的守护线程中的。
-
-运行上述程序就会发现只打印 abs.main thread！当你让主线程休眠时这个后台协程就会执行，如上把注释去除再运行即可。
-
-
-接下来看看GlobalScope.launch协程与所属的线程的关系：
-
-```kotlin
-fun abs.main() {
-    
-    GlobalScope.launch {
-        println("协程1-当前所属线程：${Thread.currentThread().name}")
-
-        launch {
-            println("协程2-当前所属线程：${Thread.currentThread().name}")
-        }
-
-        launch {
-            println("协程3-当前所属线程：${Thread.currentThread().name}")
-        }
-        launch {
-            println("协程4-当前所属线程：${Thread.currentThread().name}")
-        }
-
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
         GlobalScope.launch {
-            println("协程5-当前所属线程：${Thread.currentThread().name}")
+            println("my-test hello kt Coroutine ！")
         }
+        println("my-test main thread！")
     }
-    
-    Thread.sleep(3000)
 }
-
-log：第一次运行
-协程1-当前所属线程：DefaultDispatcher-worker-1
-协程2-当前所属线程：DefaultDispatcher-worker-2
-协程3-当前所属线程：DefaultDispatcher-worker-2
-协程4-当前所属线程：DefaultDispatcher-worker-2
-协程5-当前所属线程：DefaultDispatcher-worker-2
-
-log：第二次运行
-协程1-当前所属线程：DefaultDispatcher-worker-1
-协程2-当前所属线程：DefaultDispatcher-worker-2
-协程3-当前所属线程：DefaultDispatcher-worker-2
-协程5-当前所属线程：DefaultDispatcher-worker-3
-协程4-当前所属线程：DefaultDispatcher-worker-2
 ```
+很简单使用GlobalScope的launch方法开启一个协程,这里我们先明白一点GlobalScope.launch开启的协程默认跑在 子线程中、子线程中、子线程中。
 
-- 通过GlobalScope.launch {} 方式开启协程后，会先创建一个子线程，并运行在子线程中。
-- 后续开启的协程要么运行在新的子线程中，要么运行在已存在的子线程中。这个受编程语言的调度。具有不确定性。
-- 换句话来说每通过GlobalScope.launch {} 方式开启的携程都会运行在子线程中，但是运行的子线程具有不确定性，有可能是已经存在的子线程（其他协程创建的），有可能先创建个子线程再运行在子线程中。这个具有不确定性，受变成语言调度控制。
-
-总结:GlobalScope.launch {}方式开启的协程默认运行在子线程中。
 
 ###### 2、runBlocking{launch{}}
 
-runBlocking{launch{}}也能创建一个协程的上下文环境,它可以保证在表达式内的所有代码和子协程没有全部执行完之前一直阻塞当前线程.runBlocking函数通常只应该在测试环境下使用,在正式环境中容易产生性能上的问题.
+runBlocking{}也能创建一个协程的上下文环境,它可以保证在表达式内的所有代码和子协程没有全部执行完之前一直阻塞 当前 当前 当前线程.runBlocking函数通常只应该在测试环境下使用,在正式环境中容易产生性能上的问题.
 
-```kotlin
-fun abs.main() {
-    runBlocking {
-        println("currentThread：${Thread.currentThread().name}")
-
-        launch {
-            println("协程1-当前所属线程：${Thread.currentThread().name}")
-        }
-        launch {
-            println("协程2-当前所属线程：${Thread.currentThread().name}")
-        }
-        launch {
-            println("协程3-当前所属线程：${Thread.currentThread().name}")
-        }
-    }
-}
-log：
-协程1-当前所属线程：abs.main
-协程2-当前所属线程：abs.main
-协程3-当前所属线程：abs.main
-```
 此种方式开启协程，默认的线程调度为当前线程。怎样理解呢？
 
-- 如果runBlocking所处的线程为Main线程则launch所处的线程为Main线程
+- 如果runBlocking所处的线程为Main线程则launch所处的线程默认为Main线程
 
-- 如果runBlocking所处的线程为work线程则launch所处的线程为Work线程
+- 如果runBlocking所处的线程为work线程则launch所处的线程默认为Work线程
 
-runBlocking{} 阻塞主线程验证
+看个🌰
+
 ```kotlin
-fun abs.main() {
-    // 1、代码开始执行runBlocking，然后阻塞主线程
-    runBlocking {
-         launch {
-            println("task which need long time !")
-                 delay(1000*5)
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        thread {
+            runBlocking {
+                launch {
+                    println("runningBlock2：${Thread.currentThread().name}")
+                }
+            }
         }
-        println("i am quit ！")
+        
+        runBlocking {
+            launch {
+                println("runningBlock1：${Thread.currentThread().name}")
+            }
+        }
     }
-    // 2、runBlocking{} 内的代码执行完毕，开始继续往下执行，也即执行这里
-    println("im abs.main") 
 }
 
-log:
-i am quit ！
-task which need long time !
-im abs.main // 这个延迟了5s才被输出
+I  runningBlock1：main
+I  runningBlock2：Thread-2
 ```
 
-###### 3、CoroutineScope(job).launch{}
+###### 3、MainScope
 
-CoroutineScope对象也具有协程上下文，使用CoroutineScope对象的launch创建的协程统统会被job所管理.大大降低协程维护成本.
+MainScope 是一个特殊的 CoroutineScope，通常用于与 UI 线程相关的协程操作。MainScope 的设计目的是为了简化与 Android 应用程序或者其他 UI 框架集成时的协程管理。
+
+UI 操作需要在主线程上执行，而协程默认在后台线程上运行。为了在协程中执行 UI 操作，可以使用 MainScope 来创建一个与主线程关联的协程作用域。
+
+```kotlin
+class MainActivity : AppCompatActivity() {
+    private val mainScope = MainScope()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        mainScope.launch {
+            delay(1000*10)
+            println("my-test: main scope test")
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        //取消与主线程关联的写成，避免内存泄漏
+        mainScope.cancel()
+    }
+}
+```
+
+这里我们就需要留意几点了：
+
+- MainScope开启协程后协程运行在UI线程，协程内的耗时操作不会阻塞主线程。为啥呢？这里涉及到了协程的Dispatchers，MainScope的Dispatchers是
+Dispatchers.Main，协程库专门进行了处理，Dispatchers.Main的协程内可以进行UI操作。
+- MainScope使用完毕后记得cancel，这个需要我们手动处理下。
+
+
+
+###### 4、CoroutineScope(job)
+
+CoroutineScope也具有协程上下文，使用CoroutineScope的launch创建的协程统统会被job所管理.大大降低协程维护成本.
 
 ```kotlin
     val job = Job()
     val scope = CoroutineScope(job) 
     scope.launch {
-        println("当前Thread：${Thread.currentThread().name}") 
+       // todo 
     }
+    job.cancel()
 ```
 
-此种方式开启携程，默认的线程调度为子线程.
+此种方式开启协程，默认的线程调度为子线程. 细心的我们会发现MainScope就是对CoroutineScope的封装，写死了线程调度器。记住使用CoroutineScope
+也记得在Android组件生命周期结束时cancel。
 
+###### 5、viewModelScope
 
-###### 4、小结
+这个很简单，是ktx对协程的扩展，android中默认帮我们处理了生命周期。默认跑在UI线程。可通过任务调度器手动切换线程
 
-- 掌握哪些对象可调用launch{}
-- 掌握不同对象通过launch开启携程后，知道协程所属的线程。
-- 了解其他的对象如Android的MainScope等也可以调用launch。
-
+```kotlin
+class MainViewModel:ViewModel() {
+    fun login() = viewModelScope.launch { 
+        delay(1000)
+    }
+}
+```
 
 # 挂起函数与异步结果
 
-挂起函数概念我们可以先不看，初次上来一看可能懵逼，不理解，，，，目前我们只需知道如下：
+挂起函数概念我们可以先不看，目前我们只需知道如下：
 
-- delay是我们接触的第一个挂起函数，他的作用是非阻塞当前线程，阻塞当前携程。
-- Suspend function should be called only from a coroutine or another suspend function 翻译过来很简单，挂起函数只能被协程作用域或者其他的挂起函数调用~
+delay是我们接触的第一个挂起函数，他的作用是非阻塞当前线程，阻塞当前携程。
+
+Suspend function should be called only from a coroutine or another suspend function
 
 ###### 1、挂起函数定义&调用
 
+通过suspend关键字定义的函数就是挂起函数。
+
 ```kotlin
-fun abs.main() = runBlocking {
+fun main() = runBlocking {
     // 计算顺序调用的执行时间
     val time = measureTimeMillis {
         val a = testOne()
@@ -236,9 +220,6 @@ fun abs.main() = runBlocking {
     println("耗时：$time ms")
 }
 
-/**
- * 通过suspend 关键字定义的函数就是挂起函数。
- * */
 suspend fun testOne(): Int {
     delay(1000)
     return 10
@@ -249,7 +230,6 @@ suspend fun testTwo(): Int {
     return 20
 }
 
-
 log:
 a+b=30
 耗时：2045 ms
@@ -258,18 +238,15 @@ a+b=30
 
 ###### 2、带返回结果的协程async
 
-这里需要阐明一点了开启协程有两种方式：
+kt中开启协程有两种方式：launch{} 、async{}二者的不同点在于
 
-- launch
-- async
-
-async 类似于 launch。它启动了一个单独的协程，不同之处在于 launch 返回一个 Job 并且不附带任何结果值，而 async 返回一个 Deferred ， 这代表了一个将会在稍后提供结果， 可以使用await() 在一个延期的值上得到它的最终结果，Deferred 也是一个 Job，所以如果需要的话，你可以取消它。
+- launch{}会返回一个Job并且不附带任何结果值。
+- async{}会返回一个Deferred，可以使用Deferred.await()来获取这个异步结果，Deferred也是一个 Job，如果需要我们也可以取消它。
 
 还是上述栗子，假如testOne、testTwo两个函数没有执行顺序，这时可以让二者并发执行，而且使用async可以获取执行结果：
 
 ```kotlin
-fun abs.main() = runBlocking {
-
+fun main() = runBlocking {
     // 计算并发执行的总时间
     val time = measureTimeMillis {
         val a = async { testOne() } 
@@ -296,42 +273,41 @@ a+b=30
 
 可见带返回结果的async很容易实现异步计算~
 
-刚接触，这里有人可能会出现疑惑：launch也是开启了协程，也是异步的，为啥还要设计async呢？
+刚接触，这里有人可能会出现疑惑：launch也是开启了协程，也是异步的，为啥还要设计async呢？ 这里需要明白这点：
 
-注意async的设计是有返回结果的，可以异步计算，而launch无返回结果，不可进行异步计算。
+async的设计是有返回结果的，可以异步计算，而launch无返回结果，不可进行异步计算。
 
 
 ###### 3、async的惰性启动
 
-如果不想async{}之后就立即启动协程可以通过将 start 参数设置为 CoroutineStart.LAZY 而变为惰性的。 这样只有结果通过 await 获取的时候协程才会启动，或者在 Job 的 start 函数调用的时候。
+如果不想async{}之后就立即启动协程可以通过将 start 参数设置为 CoroutineStart.LAZY 而变为惰性的。
+
+这样只有结果通过 await 获取的时候协程才会启动，或者在 Job的 start 函数调用的时候。
 
 ```kotlin
-fun abs.main() = runBlocking {
+class MainActivity : AppCompatActivity() {
 
-    val test1 = async (start = CoroutineStart.LAZY){
-        println("1当前线程：${Thread.currentThread().name}")
-        1+1
-    }
-    
-    val test2 = async (start = CoroutineStart.LAZY) {
-        println("2当前线程：${Thread.currentThread().name}")
-        1+1
-    }
-    
-    println("结果：${test1.await()}") // 调用await时才启动
-    println("结果：${test2.await()}") // 调用await时才启动
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
+        lifecycleScope.launch {
+
+            val def = async(start = CoroutineStart.LAZY) {
+                println("my-test: async")
+                1
+            }
+
+            delay(1000*10)
+            val result = def.await()
+            println("my-test: result:$result")
+        }
+    }
 }
 
-log:
-
-1当前线程：abs.main
-结果：2
-2当前线程：abs.main
-结果：2
-
 ```
-其实你会发现上述的pln注释之后是async 是不会有结果打印的，证明CoroutineStart.LAZY时async未执行。
+
+我们会发现程序跑起来10s后两个log会依次打印。在此之前无log打印
 
 
 # 协程上下文与调度器
@@ -343,7 +319,7 @@ log:
 
 ```kotlin
 @ObsoleteCoroutinesApi
-fun abs.main() = runBlocking<Unit> {
+fun main() = runBlocking<Unit> {
      // 默认运行在当前线程   
      launch{
 
@@ -360,9 +336,10 @@ fun abs.main() = runBlocking<Unit> {
 ```
 
 Dispatchers中定义了如下：
-- Default 默认的调度器。祥见前面的几种开启方式，使用的就是默认调度器。
+
+- Default 默认的调度器。此调度程序经过了专门优化，适合在主线程之外执行占用大量 CPU 资源的工作。用例示例包括对列表排序和解析 JSON
 - Main：协程运行在Main线程
-- Unconfined 是一个特殊的调度器且似乎也运行在 abs.main 线程中，但实际上， 它是一种不同的机制，这会在后文中讲到。
+- Unconfined 是一个特殊的调度器且似乎也运行在main 线程中，但实际上， 它是一种不同的机制，这会在后文中讲到。
 - IO 协程运行在IO线程
 
 ###### 2、子协程
@@ -382,7 +359,7 @@ val v1 = async(CoroutineName("xxx")) {}
 注意有时我们需要在协程上下文中定义多个元素。我们可以使用 + 操作符来实现。 比如说，我们可以显式指定一个调度器来启动协程并且同时显式指定一个命名:
 
 ```kotlin
-fun abs.main() = runBlocking<Unit> {
+fun main() = runBlocking<Unit> {
 
     launch(Dispatchers.Unconfined+CoroutineName("aaa")) {
 
@@ -391,27 +368,51 @@ fun abs.main() = runBlocking<Unit> {
 }
 ```
 
+# 功能强大的withContext
 
-# 补充
-
-###### 1、withContext
-
-withContext可以理解为async函数的简化版,它是一个挂起函数,返回结果是withContext函数体内最后一行代码.相当于val result = async{a+b}.await()
+withContext可以理解为async函数的简化版,它是一个挂起函数,返回结果是withContext函数体内最后一行。代码相当于val result = async{a+b}.await()
 
 ```kotlin
-fun abs.main() = runBlocking {
+fun main() = runBlocking {
     val result = withContext(Dispatchers.Default) {
         1+1
     }
     println(result)
 }
 ```
-withContext还是挺nice的：
+withContext的任意切换线程、消除了回调还是很nice的
 
-- 任意切线程
-- lambda带返回结果
+```kotlin
+class MainActivity : AppCompatActivity() {
 
-# The end 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            println("my test lifecycleScope.launch1 - ${Thread.currentThread().name}")
+            val json = withContext(Dispatchers.IO) {
+                getDataFromBackend()
+            }
+            println("my test lifecycleScope.launch2 - ${Thread.currentThread().name}")
+            // parse json and update ui
+        }
+    }
+
+    private suspend fun getDataFromBackend(): String {
+        println("my test getDataFromBackend - ${Thread.currentThread().name}")
+        // 模拟网络请求
+        return "i am json"
+    }
+}
+```
+I  my test lifecycleScope.launch1 - main
+I  my test getDataFromBackend - DefaultDispatcher-worker-2
+I  my test lifecycleScope.launch2 - main
+
+如图以同步的方式写异步操作十分nice~  getDataFromBackend是一个挂起函数，这跑在work线程中withContext块以外的代码都是跑在主线程的。
+
+# The End 
 
 [Kotlin coroutines doc](https://legacy.kotlincn.net/docs/reference/coroutines/coroutines-guide.html)
 
