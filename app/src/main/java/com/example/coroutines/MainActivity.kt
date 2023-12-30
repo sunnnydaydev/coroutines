@@ -8,6 +8,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -17,31 +22,20 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-
-
-        lifecycleScope.launch(Dispatchers.Main) {
-            println("my test lifecycleScope.launch1 - ${Thread.currentThread().name}")
-            val json = withContext(Dispatchers.IO) {
-                getDataFromBackend()
+        flow {
+            listOf("hello", "kotlin", "flow").forEach {
+                emit(it)//生产数据
             }
-            println("my test lifecycleScope.launch2 - ${Thread.currentThread().name}")
-            // parse json and update ui
         }
 
-       val job =  CoroutineScope(Dispatchers.Main).launch {
+        flowOf("hello", "kotlin", "flow")
 
-       }
-        job.cancel()
-    }
+        listOf("hello", "kotlin", "flow").asFlow()
 
-    private suspend fun getDataFromBackend(): String {
-        println("my test getDataFromBackend - ${Thread.currentThread().name}")
-        // 模拟网络请求
-        return "i am json"
+        val emptyFlow = emptyFlow<Int>()
+
+        lifecycleScope.launch {
+
+        }
     }
 }
-
-2023-12-28 22:14:48.675 30305-30305 System.out              com.example.coroutines               I  my test lifecycleScope.launch1 - main
-2023-12-28 22:14:48.678 30305-30329 System.out              com.example.coroutines               I  my test getDataFromBackend - DefaultDispatcher-worker-2
-2023-12-28 22:14:48.678 30305-30305 System.out              com.example.coroutines               I  my test lifecycleScope.launch2 - main
