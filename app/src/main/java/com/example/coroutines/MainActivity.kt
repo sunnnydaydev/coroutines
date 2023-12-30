@@ -8,8 +8,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectIndexed
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -22,20 +25,27 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        flow {
-            listOf("hello", "kotlin", "flow").forEach {
-                emit(it)//生产数据
-            }
-        }
 
-        flowOf("hello", "kotlin", "flow")
-
-        listOf("hello", "kotlin", "flow").asFlow()
-
-        val emptyFlow = emptyFlow<Int>()
+      val flow =  flow {
+          listOf("hello", "kotlin", "flow").forEachIndexed{ index, s ->
+              if (index==1){
+                  delay(1000)
+              }else{
+                  emit(s)
+              }
+          }
+      }
 
         lifecycleScope.launch {
-
+            flow {
+                emit(1)
+                delay(50)
+                emit(2)
+            }.collectLatest { value ->
+                println("my-test Collecting $value")
+                delay(100) // Emulate work
+                println("my-test $value collected")
+            }
         }
     }
 }

@@ -45,11 +45,11 @@
 如下创建flow对象，并生产数据
 
 ```kotlin
-        flow {
-            listOf("hello", "kotlin", "flow").forEach {
-                emit(it)//生产数据
-            }
-        }
+flow {
+    listOf("hello", "kotlin", "flow").forEach {
+        emit(it)//生产数据
+    }
+}
 ```
 
 ###### 2、flowOf
@@ -57,7 +57,7 @@
 如何使用呢？代码如下：
 
 ```kotlin
-        flowOf("hello", "kotlin", "flow")
+flowOf("hello", "kotlin", "flow")
 ```
 
 很简单针对flow{}进行了封装
@@ -106,7 +106,7 @@ Flow和RxJava一样，用各种操作符撑起了异步数据流框架的半边�
 
 末端操作符都是suspend函数，所以需要运行在协程作用域中。
 
-- collect
+- collect：最常用的末端操作符，用于collect上游产生的数据
 - collectIndexed
 - collectLatest
 - toCollection
@@ -117,6 +117,30 @@ Flow和RxJava一样，用各种操作符撑起了异步数据流框架的半边�
 - lastOrNull
 - first
 - firstOrNull
+
+(1)collect
+
+```kotlin
+val flow = flowOf("hello", "kotlin", "flow")
+
+lifecycleScope.launch {
+    flow.collect {
+        println("my-test：collected data ->$it")
+    }
+}
+/**
+my-test：collected data ->hello
+my-test：collected data ->kotlin
+my-test：collected data ->flow
+ * */
+
+lifecycleScope.launch {
+    flow.collectIndexed { index, value ->
+        println("my-test：collected data ->$index $value")
+    }
+}
+```
+
 
 ###### 2、状态操作符
 
@@ -169,6 +193,15 @@ Flow和RxJava一样，用各种操作符撑起了异步数据流框架的半边�
 ###### 1、同步阻塞
 
 ###### 2、异步阻塞
+
+
+# The end
+
+[再谈协程之第三者Flow基础档案](https://mp.weixin.qq.com/s/hpLTj8SiirGvw2hsPLL-1g)
+
+[Android flow doc](https://developer.android.google.cn/kotlin/flow?hl=zh_cn)
+
+[kotlin flow doc](https://legacy.kotlincn.net/docs/reference/coroutines/flow.html)
 
 
 
