@@ -3,7 +3,9 @@ package com.example.coroutines
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -16,6 +18,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+
+
         lifecycleScope.launch(Dispatchers.Main) {
             println("my test lifecycleScope.launch1 - ${Thread.currentThread().name}")
             val json = withContext(Dispatchers.IO) {
@@ -24,6 +28,11 @@ class MainActivity : AppCompatActivity() {
             println("my test lifecycleScope.launch2 - ${Thread.currentThread().name}")
             // parse json and update ui
         }
+
+       val job =  CoroutineScope(Dispatchers.Main).launch {
+
+       }
+        job.cancel()
     }
 
     private suspend fun getDataFromBackend(): String {

@@ -71,7 +71,7 @@ Kotlin中常见的几种创建方式
 
 需要注意点
 
-- 协程是轻量级的线程。 它们运行在协程上下文中，通过 launch 协程构建器可以在协程上下文中开启一个携程。
+- 协程是轻量级的线程。 它们运行在协程上下文中，通过 launch 协程构建器可以在协程上下文中开启一个协程。
 - 协程是依赖线程的，所以其生命周期受所属线程的影响。线程执行完毕协程也会关闭。
 - 线程提供了Thread.sleep 来阻塞当前线程，协程也提供了相应的挂起函数delay来阻塞当前协程。注意delay这个挂起函数会阻塞当前协成但不会阻塞协成所属的线程。
 
@@ -169,25 +169,30 @@ Dispatchers.Main，协程库专门进行了处理，Dispatchers.Main的协程内
 
 
 
-###### 4、CoroutineScope(job)
+###### 4、CoroutineScope(coroutineContext)
 
 CoroutineScope也具有协程上下文，使用CoroutineScope的launch创建的协程统统会被job所管理.大大降低协程维护成本.
 
 ```kotlin
     val job = Job()
     val scope = CoroutineScope(job) 
-    scope.launch {
-       // todo 
-    }
+    scope.launch {}
     job.cancel()
 ```
+
+```kotlin
+       val job =  CoroutineScope(Dispatchers.Main).launch {}
+        job.cancel()
+```
+
+Dispatchers.XXX、Job最终都是继承CoroutineContext的。
 
 此种方式开启协程，默认的线程调度为子线程. 细心的我们会发现MainScope就是对CoroutineScope的封装，写死了线程调度器。记住使用CoroutineScope
 也记得在Android组件生命周期结束时cancel。
 
 ###### 5、viewModelScope
 
-这个很简单，是ktx对协程的扩展，android中默认帮我们处理了生命周期。默认跑在UI线程。可通过任务调度器手动切换线程
+这个很简单，是ktx对协程的扩展，android中默认帮我们处理了生命周期。默认跑在UI、UI、UI线程。可通过任务调度器手动切换线程
 
 ```kotlin
 class MainViewModel:ViewModel() {
@@ -197,11 +202,13 @@ class MainViewModel:ViewModel() {
 }
 ```
 
+lifecycleScope与之类似这里就不再举🌰
+
 # 挂起函数与异步结果
 
 挂起函数概念我们可以先不看，目前我们只需知道如下：
 
-delay是我们接触的第一个挂起函数，他的作用是非阻塞当前线程，阻塞当前携程。
+delay是我们接触的第一个挂起函数，他的作用是非阻塞当前线程，阻塞当前协程。
 
 Suspend function should be called only from a coroutine or another suspend function
 
@@ -414,7 +421,10 @@ class MainActivity : AppCompatActivity() {
 
 如图以同步的方式写异步操作十分nice~  getDataFromBackend是一个挂起函数，这跑在work线程中withContext块以外的代码都是跑在主线程的。
 
+
+
 # The End 
+
 
 [Kotlin coroutines doc](https://legacy.kotlincn.net/docs/reference/coroutines/coroutines-guide.html)
 
