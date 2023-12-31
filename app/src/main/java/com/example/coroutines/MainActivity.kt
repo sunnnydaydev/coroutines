@@ -15,9 +15,11 @@ import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.lastOrNull
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+
 
 
 class MainActivity : AppCompatActivity() {
@@ -26,26 +28,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-      val flow =  flow {
-          listOf("hello", "kotlin", "flow").forEachIndexed{ index, s ->
-              if (index==1){
-                  delay(1000)
-              }else{
-                  emit(s)
-              }
-          }
-      }
-
         lifecycleScope.launch {
-            flow {
-                emit(1)
-                delay(50)
-                emit(2)
-            }.collectLatest { value ->
-                println("my-test Collecting $value")
-                delay(100) // Emulate work
-                println("my-test $value collected")
+            val flow = flow {
+                for (i in 1..3) {
+                    println("my-test emit $i")
+                    emit(i)
+                }
             }
+            flow.lastOrNull()
         }
     }
 }

@@ -106,19 +106,13 @@ Flow和RxJava一样，用各种操作符撑起了异步数据流框架的半边�
 
 末端操作符都是suspend函数，所以需要运行在协程作用域中。
 
-- collect：最常用的末端操作符，用于collect上游产生的数据
+(1)collect
+
+collect是最常用的末端操作符，用于collect上游产生的数据。相关的api有如下三个：
+
+- collect
 - collectIndexed
 - collectLatest
-- toCollection
-- toSet
-- toList
-- launchIn
-- last
-- lastOrNull
-- first
-- firstOrNull
-
-(1)collect
 
 ```kotlin
 val flow = flowOf("hello", "kotlin", "flow")
@@ -141,15 +135,102 @@ lifecycleScope.launch {
 }
 ```
 
+collectLatest 用于collect最新数据，官方文档这样解释
+
+The crucial difference from collect is that when the original flow emits a new value then the action block for the previous value is cancelled.
+
+```kotlin
+val flow = flow {
+    for (i in 1..3) {
+        println("my-test emit $i")
+        emit(i)
+    }
+}
+flow
+    .collectLatest { value ->
+        delay(1)
+        println("my-test Collecting $value")
+    }
+/**
+I  my-test emit 1
+I  my-test emit 2
+I  my-test emit 3
+I  my-test Collecting 3
+ * */
+```
+
+一个常用的场景就是UI数据的更新，当有多个可能导致 UI 更新的事件时，例如网络请求、数据库查询等，使用 collectLatest 可以确保只处理最新的数据，避免因为处理过时的数据而导致 UI 不必要的更新。
+
+(2)转化为集合
+
+- toCollection
+- toSet
+- toList
+
+很简单的api，这个不用🌰了~
+
+(3)launchIn
+
+在指定的协程作用域中直接执行Flow
+
+```kotlin
+ flow.launchIn(lifecycleScope)
+```
+
+(4) last&first
+
+获取last&first数据
+
+last、lastOrNull、first、firstOrNull
+
+这里直接看源码算了，不举🌰啦
+
+```kotlin
+public suspend fun <T> Flow<T>.last(): T {
+    var result: Any? = NULL
+    collect {
+        result = it
+    }
+    if (result === NULL) throw NoSuchElementException("Expected at least one element")
+    return result as T
+}
+```
+
+```kotlin
+public suspend fun <T> Flow<T>.lastOrNull(): T? {
+    var result: T? = null
+    collect {
+        result = it
+    }
+    return result
+}
+```
+
+需要注意一点，当last元素为null，这个方法会抛异常，然而lastOrNull不这样，这也是二者的区别。
+
+first用法与之类似
+
 
 ###### 2、状态操作符
 
-- onStart
-- onCompletion
-- onEach
-- onEmpty
-- catch
-- retry、retryWhen
+状态操作符不做任何修改，只是在合适的节点返回状态
+
+(1) onStart 在上游生产数据前调用
+
+(2) onCompletion 在流完成或者取消时调用
+
+(3) onEach 在上游每次emit前调用
+
+(4) onEmpty 流中未产生任何数据时调用
+
+(5) catch 对上游中的异常进行捕获
+
+(6)retry、retryWhen 在发生异常时进行重试，retryWhen中可以拿到异常和当前重试的次数
+
+
+```kotlin
+
+```
 
 ###### 3、Transform操作符
 
