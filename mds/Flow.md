@@ -213,23 +213,116 @@ first用法与之类似
 
 ###### 2、状态操作符
 
-状态操作符不做任何修改，只是在合适的节点返回状态
+状态操作符不做任何修改，只是在合适的节点返回状态。
 
 (1) onStart 在上游生产数据前调用
 
-(2) onCompletion 在流完成或者取消时调用
+(2) onEach 在上游每次emit前调用
 
-(3) onEach 在上游每次emit前调用
+(3) onCompletion 在流完成或者取消时调用
 
-(4) onEmpty 流中未产生任何数据时调用
+(4) catch 对上游中的异常进行捕获
 
-(5) catch 对上游中的异常进行捕获
+(5) onEmpty 流中未产生任何数据时调用
 
 (6)retry、retryWhen 在发生异常时进行重试，retryWhen中可以拿到异常和当前重试的次数
 
 
 ```kotlin
+val flow = flow {
+    emit(1)
+}
 
+flow.onStart {
+    println("my-test: onStart")
+}.onEach {
+    println("my-test: onEach:$it")
+}.onCompletion {
+    println("my-test: onCompletion")
+}.collect {
+    println("my-test: collect:${it}")
+}
+/**
+I  my-test: onStart
+I  my-test: onEach:1
+I  my-test: collect:1
+I  my-test: onCompletion
+* */
+```
+
+很简单onStart首先被调用，onCompletion最后被调用。onEach则是没个元素emit之前被调用。
+
+catch可捕获上游的异常
+
+```kotlin
+flow<Int> {
+    throw IllegalArgumentException()
+}.onCompletion {
+    println("my-test: onCompletion:${it}")
+}.catch {
+    println("my-test: catch:${it}")
+}.collect {
+    println("my-test: collect:${it}")
+}
+/**
+I  my-test: onCompletion:java.lang.IllegalArgumentException
+I  my-test: catch:java.lang.IllegalArgumentException
+ * */
+```
+其实onCompletion也是能捕获异常的，但这里需要注意一点onCompletion要在catch之前调用。
+
+原因是为了保证异常的正确处理。如果catch在onCompletion之前调用，当流中发生异常时，catch会捕获异常并执行相应的处理，然后流程将被视为已完成。这时，onCompletion将不会再执行，因为流程已经结束。
+
+如果onCompletion在catch之前调用，那么即使在流程中发生异常，onCompletion仍然会被执行。这样，你可以确保无论流程是否正常完成或发生异常，都能执行一些清理或收尾工作。
+
+
+retry lambda 返回值为true代表一直重试，
+
+retryWhen lambda返回值控制重试次数
+
+```kotlin
+flow {
+    emit(1)
+    throw IllegalArgumentException()
+}.onStart {
+    println("my-test: onStart")
+}.retryWhen { _, count ->
+    println("my-test: retry:${count}")
+    count < 2
+}.catch {
+    println("my-test: catch:${it}")
+}.collect {
+    println("my-test: collect:${it}")
+}
+
+/**
+
+1、emit(1) 后会走onStart，然后collect到数据
+
+I  my-test: onStart
+I  my-test: collect:1
+
+2、由于emit(1)后直接抛异常，所以会触发retryWhen回调，注意每次重试条件满足时重新走onStart：
+
+I  my-test: retry:0
+I  my-test: onStart
+I  my-test: collect:1
+
+I  my-test: retry:1
+I  my-test: onStart
+I  my-test: collect:1
+
+重试条件不满足，触发异常捕获，跳到catch中
+I  my-test: retry:2
+I  my-test: catch:java.lang.IllegalArgumentException 
+ * */
+```
+
+onEmpty的使用就简单了，上游无任何数据emit就会回调这个方法：
+```kotlin
+emptyFlow<Int>().onEmpty {
+    println("my-test:onEmpty")
+}.collect()
 ```
 
 ###### 3、Transform操作符
