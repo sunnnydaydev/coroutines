@@ -334,19 +334,79 @@ emptyFlow<Int>().onEmpty {
 - transformLatest
 - transformWhile
 
-###### 4、过滤操作符
+```kotlin
+private suspend fun test4() {
+    flowOf(1, 2, 3).map {
+        it * it
+    }.collect{
+        println("my-test:collect:$it")
+    }
+}
+```
+
+map用于转化flow的数据，transform与map类似但是又不完全一样，map是一对一的变换，而transform则可以完全控制流的数据，进行过滤、 重组等等操作都可以。
+其实map、filter操作都是基于 transform封装的。这里直接简单看下源码算了：
+
+```kotlin
+public inline fun <T, R> Flow<T>.map(crossinline transform: suspend (value: T) -> R): Flow<R> = transform { value ->
+    return@transform emit(transform(value))
+}
+```
+
+很简单，map参数接受一个高阶函数transform，函数的参数类型为T，返回值类型为R，然后使用transform方法进行转化。
+
+我们使用时直接传递一个lambda即可，然后lambda最后一行的表达式充当返回值即可。接着继续看下transform方法源码：
+
+```kotlin
+public inline fun <T, R> Flow<T>.transform(
+    @BuilderInference crossinline transform: suspend FlowCollector<R>.(value: T) -> Unit
+): Flow<R> = flow { // Note: safe flow is used here, because collector is exposed to transform on each operation
+    collect { value ->
+        // kludge, without it Unit will be returned and TCE won't kick in, KT-28938
+        return@collect transform(value)
+    }
+}
+```
+这里注意了transform方法的的参数也是高阶函数，只不过函数是FlowCollector<R>的拓展函数。返回值类型也为Flow<R>
+
+因此我们需要在高阶函数中emit(R)即可。
+
+###### 4、筛选操作符
 
 - filter
 - filterInstance
 - filterNot
 - filterNotNull
-- drop
-- dropWhile
-- take
-- takeWhile
-- debounce
-- sample
-- distinctUntilChangedBy
+
+```kotlin
+flowOf(1, 2, 3).filter {
+    it % 2 != 0
+}.collect {
+    println("my-test:collect:$it")
+}
+/**
+my-test:collect:1
+my-test:collect:3
+* */
+```
+
+- drop(n) 丢弃前n个元素
+- dropWhile 根据lambda丢弃定元素(第一个触发条件的drop)
+- take(n) 取前n个元素
+- takeWhile:根据lambda取特定元素(第一个触发条件的take)
+
+```kotlin
+flowOf(1, 2, 3).takeWhile {
+    it != 2
+}.collect {
+    println("my-test:collect:$it")
+}
+//my-test:collect:1
+```
+
+- distinctUntilChangedBy：去重操作符，可以按照指定类型的参数进行去重
+- debounce：操作符用于防抖，指定时间内的值只接收最新的一个
+- sample：操作符与debounce操作符有点像，但是却限制了一个周期性时间，sample操作符获取的是一个周期内的最新的数据，可以理解为debounce操作符增加了周期的限制
 
 
 ###### 5、组合操作符

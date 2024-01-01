@@ -14,17 +14,25 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import java.lang.IllegalArgumentException
 
@@ -36,10 +44,26 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         lifecycleScope.launch {
-            test2()
+            test5()
         }
     }
 
+
+    private suspend fun test5() {
+        flowOf(1, 2, 3).dropWhile {
+            it != 2
+        }.collect {
+            println("my-test:collect:$it")
+        }
+    }
+
+    private suspend fun test4() {
+        flowOf(1, 2, 3).transform {
+            emit("it")
+        }.collect {
+            println("my-test:collect:$it")
+        }
+    }
 
     private suspend fun test3() {
         emptyFlow<Int>().onEmpty {
