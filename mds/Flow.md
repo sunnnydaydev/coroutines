@@ -485,6 +485,56 @@ my-test:collect:2b
 ```
 # Flow 的线程切换
 
+在Flow中，可以简单的使用flowOn来指定线程的切换，flowOn会对上游，以及flowOn之前的所有操作符生效
+
+```kotlin
+val flow = flow {
+    emit(1)
+    println("my-test: flow:${Thread.currentThread().name}")
+}
+flow.map {
+    println("my-test: map:${Thread.currentThread().name}")
+    it.toString()
+}.flowOn(Dispatchers.IO)
+    .collect {
+    println("my-test: collect:${Thread.currentThread().name}")
+}
+
+/***
+my-test: map:DefaultDispatcher-worker-2
+my-test: flow:DefaultDispatcher-worker-2
+my-test: collect:main
+ * */
+```
+这个🌰很简单，也验证了flowOn会对上游，以及flowOn之前的所有操作符生效。
+
+接下来我们再看个🌰
+
+```kotlin
+val flow = flow {
+    emit(1)
+    println("my-test: flow:${Thread.currentThread().name}")
+}
+flow.flowOn(Dispatchers.Main)
+    .map {
+        println("my-test: map:${Thread.currentThread().name}")
+        it.toString()
+    }.flowOn(Dispatchers.IO)
+    .collect {
+        println("my-test: collect:${Thread.currentThread().name}")
+    }
+
+/***
+my-test: flow:main
+my-test: map:DefaultDispatcher-worker-3
+my-test: collect:main
+ * */
+```
+此时flow{} 是跑在了UI线程的，这样我们了解到：
+
+flowOn会对上游，以及flowOn之前的所有操作符生效，但flowOn不会影响其他flowOn的作用域。
+
+
 # Flow 的取消
 
 # Flow 的阻塞模型

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.launchIn
@@ -47,71 +48,86 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         lifecycleScope.launch {
-            test6()
+            test7()
         }
+    }
+
+    private suspend fun test7() {
+        val flow = flow {
+            emit(1)
+            println("my-test: flow:${Thread.currentThread().name}")
+        }
+        flow.flowOn(Dispatchers.Main)
+            .map {
+                println("my-test: map:${Thread.currentThread().name}")
+                it.toString()
+            }.flowOn(Dispatchers.IO)
+            .collect {
+                println("my-test: collect:${Thread.currentThread().name}")
+            }
     }
 
     private suspend fun test6() {
         val flow1 = flowOf(1, 2)
         val flow2 = flowOf("a", "b", "c")
-        flow1.zip(flow2){ num, str ->
+        flow1.zip(flow2) { num, str ->
             "$num$str"
-        }.collect{
+        }.collect {
             println("my-test:collect:$it")
         }
     }
 
 
-private suspend fun test5() {
-    flowOf(1, 2, 3).dropWhile {
-        it != 2
-    }.collect {
-        println("my-test:collect:$it")
+    private suspend fun test5() {
+        flowOf(1, 2, 3).dropWhile {
+            it != 2
+        }.collect {
+            println("my-test:collect:$it")
+        }
     }
-}
 
-private suspend fun test4() {
-    flowOf(1, 2, 3).transform {
-        emit("it")
-    }.collect {
-        println("my-test:collect:$it")
+    private suspend fun test4() {
+        flowOf(1, 2, 3).transform {
+            emit("it")
+        }.collect {
+            println("my-test:collect:$it")
+        }
     }
-}
 
-private suspend fun test3() {
-    emptyFlow<Int>().onEmpty {
-        println("my-test:onEmpty")
-    }.collect()
-}
+    private suspend fun test3() {
+        emptyFlow<Int>().onEmpty {
+            println("my-test:onEmpty")
+        }.collect()
+    }
 
-private suspend fun test2() {
-    flow {
-        emit(1)
-        throw IllegalArgumentException()
-    }.onStart {
-        println("my-test: onStart")
-    }.retryWhen { _, count ->
-        println("my-test: retry:${count}")
-        count < 2
-    }.catch {
-        println("my-test: catch:${it}")
-    }.collect {
-        println("my-test: collect:${it}")
+    private suspend fun test2() {
+        flow {
+            emit(1)
+            throw IllegalArgumentException()
+        }.onStart {
+            println("my-test: onStart")
+        }.retryWhen { _, count ->
+            println("my-test: retry:${count}")
+            count < 2
+        }.catch {
+            println("my-test: catch:${it}")
+        }.collect {
+            println("my-test: collect:${it}")
+        }
     }
-}
 
-private suspend fun test1() {
-    val flow = flow {
-        emit(1)
+    private suspend fun test1() {
+        val flow = flow {
+            emit(1)
+        }
+        flow.onStart {
+            println("my-test: onStart")
+        }.onEach {
+            println("my-test: onEach:$it")
+        }.onCompletion {
+            println("my-test: onCompletion")
+        }.collect {
+            println("my-test: collect:${it}")
+        }
     }
-    flow.onStart {
-        println("my-test: onStart")
-    }.onEach {
-        println("my-test: onEach:$it")
-    }.onCompletion {
-        println("my-test: onCompletion")
-    }.collect {
-        println("my-test: collect:${it}")
-    }
-}
 }
