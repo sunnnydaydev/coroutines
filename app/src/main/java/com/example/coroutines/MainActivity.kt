@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.zip
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.lang.IllegalArgumentException
 
 
@@ -48,7 +49,27 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         lifecycleScope.launch {
-            test7()
+            test8()
+        }
+    }
+
+
+    private suspend fun test8(){
+        lifecycleScope.launch {
+            withTimeoutOrNull(3000){
+                flow{
+                    delay(1000)
+                    emit(1)
+                    delay(1000)
+                    emit(2)
+                    delay(1000)
+                    emit(3)
+                    delay(1000)
+                    emit(4)
+                }.collect{
+                    println("my-test:collect:$it")
+                }
+            }
         }
     }
 

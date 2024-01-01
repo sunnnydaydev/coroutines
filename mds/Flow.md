@@ -537,6 +537,33 @@ flowOn会对上游，以及flowOn之前的所有操作符生效，但flowOn不�
 
 # Flow 的取消
 
+Flow的取消，实际上就是依赖于协程的取消，看个简单的🌰
+
+```kotlin
+        lifecycleScope.launch {
+            withTimeoutOrNull(3000){
+                flow{
+                    delay(1000)
+                    emit(1)
+                    delay(1000)
+                    emit(2)
+                    delay(1000)
+                    emit(3)
+                    delay(1000)
+                    emit(4)
+                }.collect{
+                    println("my-test:collect:$it")
+                }
+            }
+        }
+
+/**
+my-test:collect:1
+my-test:collect:2
+ * */
+```
+如上，使用了withTimeoutOrNull，当代码块内执行的时间超时就触发了协程的取消，此时flow也就被取消了。因此我们只能collect两个值
+
 # Flow 的阻塞模型
 
 ###### 1、同步阻塞
