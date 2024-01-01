@@ -412,12 +412,77 @@ flowOf(1, 2, 3).takeWhile {
 ###### 5、组合操作符
 
 - combine
-- combineTransform
 - merge
 - zip
 
+```kotlin
+val numbers = (1..3).asFlow()
+val letters = flowOf("A", "B", "C")
+val combined = numbers.combine(letters) { a, b -> "$a$b" }
+combined.collect { value -> println(value) }
+
+/**
+1A
+2A
+2B
+3B
+3C
+ * */
+```
+numbers和letters是两个不同的流。使用combine函数，我们将它们组合成一个新的流combined，并且通过提供的lambda表达式将它们的值合并在一起。在这个例子中，新流combined会在numbers或letters中的任一流发射新值时触发，并使用最新的值调用提供的lambda表达式。
+
+这个貌似不好理解我们可以看这个例子：
+
+```kotlin
+val flow1 = flowOf(1, 2)
+val flow2 = flowOf("a", "b", "c")
+flow1.combine(flow2){ num, str ->
+    "$num$str"
+}.collect{
+    println("my-test:collect:$it")
+}
+
+/**
+my-test:collect:1a
+my-test:collect:2a
+my-test:collect:2b
+my-test:collect:2c
+ * */
+```
+可以发现，当两个Flow数量不同时，始终由Flow1开始，用其最新的元素，与Flow2的最新的元素进行组合，形成新的元素。
 
 
+merge操作符用于将多个流合并，类似集合的展平
+
+```kotlin
+val flow1 = flowOf(1, 2)
+val flow2 = flowOf("a", "b", "c")
+listOf(flow1,flow2).merge().collect{
+    println("my-test:collect:$it")
+}
+/***
+my-test:collect:1
+my-test:collect:2
+my-test:collect:a
+my-test:collect:b
+my-test:collect:c
+ * */
+```
+zip操作符会分别从两个流中取值，当一个流中的数据取完，zip过程就完成了
+
+```kotlin
+val flow1 = flowOf(1, 2)
+val flow2 = flowOf("a", "b", "c")
+flow1.zip(flow2){ num, str ->
+    "$num$str"
+}.collect{
+    println("my-test:collect:$it")
+}
+/***
+my-test:collect:1a
+my-test:collect:2b
+ * */
+```
 # Flow 的线程切换
 
 # Flow 的取消
