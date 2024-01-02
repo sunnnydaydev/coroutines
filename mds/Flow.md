@@ -564,13 +564,6 @@ my-test:collect:2
 ```
 如上，使用了withTimeoutOrNull，当代码块内执行的时间超时就触发了协程的取消，此时flow也就被取消了。因此我们只能collect两个值
 
-# Flow 的阻塞模型
-
-###### 1、同步阻塞
-
-###### 2、异步阻塞
-
-
 # The end
 
 [再谈协程之第三者Flow基础档案](https://mp.weixin.qq.com/s/hpLTj8SiirGvw2hsPLL-1g)
