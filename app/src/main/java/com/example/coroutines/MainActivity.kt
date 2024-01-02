@@ -1,8 +1,13 @@
 package com.example.coroutines
 
 import android.os.Bundle
+import android.util.Log
+import android.view.View
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -44,12 +49,28 @@ import java.lang.IllegalArgumentException
 
 class MainActivity : AppCompatActivity() {
 
+    private val latestNewsViewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        /**
+         * init 中_uiState.value的最后值是100
+         * */
         lifecycleScope.launch {
-            test8()
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                latestNewsViewModel.uiState.collect {
+                    Log.d("my-test", "UI层拿到数据:${it}")
+                }
+            }
+        }
+        /**
+         *activity页面跑起来后点击下按钮：
+         *这里_uiState.value在100的基础上拼接0,1,2,3 只输出最终的值1000123
+         * */
+        findViewById<View>(R.id.btnTest).setOnClickListener {
+            latestNewsViewModel.updateValue()
         }
     }
 
