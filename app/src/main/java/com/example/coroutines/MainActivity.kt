@@ -60,25 +60,39 @@ class MainActivity : AppCompatActivity() {
          * */
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                latestNewsViewModel.uiState.collect {
-                    Log.d("my-test", "UI层拿到数据:${it}")
+
+
+                launch {
+                    latestNewsViewModel.event.collect {
+                        Log.d("my-test", "观察者1拿到数据:${it}")
+                    }
                 }
+
+                launch {
+                    latestNewsViewModel.event.collect {
+                        Log.d("my-test", "观察者2拿到数据:${it}")
+                    }
+                }
+
+                findViewById<View>(R.id.btnTest).setOnClickListener {
+                    Log.d("my-test", "add 观察者3")
+                    launch {
+                        latestNewsViewModel.event.collect {
+                            Log.d("my-test", "观察者3拿到数据:${it}")
+                        }
+                    }
+                }
+
             }
         }
-        /**
-         *activity页面跑起来后点击下按钮：
-         *这里_uiState.value在100的基础上拼接0,1,2,3 只输出最终的值1000123
-         * */
-        findViewById<View>(R.id.btnTest).setOnClickListener {
-            latestNewsViewModel.updateValue()
-        }
+
     }
 
 
-    private suspend fun test8(){
+    private suspend fun test8() {
         lifecycleScope.launch {
-            withTimeoutOrNull(3000){
-                flow{
+            withTimeoutOrNull(3000) {
+                flow {
                     delay(1000)
                     emit(1)
                     delay(1000)
@@ -87,7 +101,7 @@ class MainActivity : AppCompatActivity() {
                     emit(3)
                     delay(1000)
                     emit(4)
-                }.collect{
+                }.collect {
                     println("my-test:collect:$it")
                 }
             }

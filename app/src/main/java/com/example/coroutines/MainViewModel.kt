@@ -3,7 +3,9 @@ package com.example.coroutines
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -12,26 +14,15 @@ import kotlinx.coroutines.launch
  */
 class MainViewModel : ViewModel() {
 
-    private var count = 0
+    private val _event: MutableSharedFlow<Int> = MutableSharedFlow(1)
 
-    private val _uiState: MutableStateFlow<Int> = MutableStateFlow(0)
-
-    val uiState: StateFlow<Int> = _uiState
+    val event: SharedFlow<Int> = _event
 
     init {
         viewModelScope.launch {
-            while (count <= 100) {
-                _uiState.value = count
-                count += 2
-            }
-        }
-    }
-
-    fun updateValue() {
-        viewModelScope.launch {
-            for (i in 0..3) {
-                _uiState.value = _uiState.value + i
-            }
+            _event.emit(1)
+            _event.emit(2)
+            _event.emit(3)
         }
     }
 }
